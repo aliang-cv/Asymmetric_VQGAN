@@ -56,7 +56,7 @@ data:
     validation:
       target: ldm.data.imagenet.ImageNetsv
       params:
-        indir: /mnt/output/myvalsam
+        indir: /data01/lxl_workspace/Asymmetric_VQGAN/output/myvalsam
 
 lightning:
   callbacks:
