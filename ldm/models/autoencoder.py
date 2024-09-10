@@ -11,18 +11,6 @@ from ldm.modules.diffusionmodules.my_decoder import Decoder, Decoder_wocondition
 from ldm.modules.distributions.distributions import DiagonalGaussianDistribution
 
 from ldm.util import instantiate_from_config
-from omegaconf import OmegaConf
-from ldm.models.diffusion.ddim import DDIMSampler
-from PIL import Image
-
-
-import pandas as pd
-
-from saicinpainting.evaluation.data import PrecomputedInpaintingResultsDataset
-from saicinpainting.evaluation.evaluator import InpaintingEvaluator, lpips_fid100_f1
-from saicinpainting.evaluation.losses.base_loss import SegmentationAwareSSIM, \
-    SegmentationClassStats, SSIMScore, LPIPSScore, FIDScore, SegmentationAwareLPIPS, SegmentationAwareFID
-from saicinpainting.evaluation.utils import load_yaml
 
 class VQModel(pl.LightningModule):
     def __init__(self,

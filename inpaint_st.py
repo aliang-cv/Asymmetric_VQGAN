@@ -10,14 +10,10 @@ from tqdm import tqdm
 import torch
 import os
 import argparse
-
-
-from ldm.models.diffusion.ddim import DDIMSampler
-
-MAX_SIZE = 640
-
 import cv2
 
+from ldm.models.diffusion.ddim import DDIMSampler
+MAX_SIZE = 640
 
 
 def load_model_from_config(config, ckpt, verbose=False):
@@ -52,12 +48,11 @@ def numpy_to_pil(images):
     return pil_images
 
 
-
 def initialize_model(config, ckpt):
-    config = OmegaConf.load(config)
-    model = instantiate_from_config(config.model)
+    config = OmegaConf.load(config)                                 # 读取配置文件
+    model = instantiate_from_config(config.model)                   # 实例化模型配置
 
-    model.load_state_dict(torch.load(ckpt)["state_dict"], strict=False)
+    model.load_state_dict(torch.load(ckpt)["state_dict"], strict=False)         # 加载权重
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -98,7 +93,7 @@ def make_batch_sd(
 
 def inpaint(opt, sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples=1, w=512, h=512, image_name=''):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    config1 = OmegaConf.load(opt.config)
+    config1 = OmegaConf.load(opt.config)                # 获取参数
     first_stage_model = load_model_from_config(config1, opt.ckpt)
     first_stage_model = first_stage_model.to(device)
     model = sampler.model
@@ -109,12 +104,12 @@ def inpaint(opt, sampler, image, mask, prompt, seed, scale, ddim_steps, num_samp
     with torch.no_grad():
 
         with torch.cuda.amp.autocast():
-            batch = make_batch_sd(image, mask, txt=prompt, device=device, num_samples=num_samples)
+            batch = make_batch_sd(image, mask, txt=prompt, device=device, num_samples=num_samples)  # 创建字典
 
-            c = model.cond_stage_model.encode(batch["txt"])
+            c = model.cond_stage_model.encode(batch["txt"])     # 条件对文本进行编码
 
             c_cat = list()
-            for ck in model.concat_keys:
+            for ck in model.concat_keys:                        # 获取concat_keys
                 cc = batch[ck].float()
                 if ck != model.masked_image_key:
                     bchw = [num_samples, 4, h // 8, w // 8]
@@ -129,12 +124,12 @@ def inpaint(opt, sampler, image, mask, prompt, seed, scale, ddim_steps, num_samp
             # cond = {"c_concat": [c_cat]}
 
             # uncond cond
-            uc_cross = model.get_unconditional_conditioning(num_samples, "")
+            uc_cross = model.get_unconditional_conditioning(num_samples, "")        # 获取无条件
             uc_full = {"c_concat": [c_cat], "c_crossattn": [uc_cross]}
             # uc_full = {"c_concat": [c_cat]}
 
             shape = [model.channels, h // 8, w // 8]
-            samples_cfg, intermediates = sampler.sample(
+            samples_cfg, intermediates = sampler.sample(                            # 进行采样推理
                 ddim_steps,
                 num_samples,
                 shape,
@@ -161,25 +156,24 @@ def inpaint(opt, sampler, image, mask, prompt, seed, scale, ddim_steps, num_samp
     return result
 
 
-
 def run(opt):
-    # st.title("Stable Diffusion Inpainting")
+    # st.title("Stable Diffusion Inpainting")  训练sd inpainting
 
-    sampler = initialize_model(opt.config_d, opt.ckpt_d)
-    masks = sorted(glob.glob(os.path.join(opt.indir, "*_mask.png")))
+    sampler = initialize_model(opt.config_d, opt.ckpt_d)                    # 初始化采样器模型
+    masks = sorted(glob.glob(os.path.join(opt.indir, "*_mask.png")))        # 创建mask图片列表
     images = [x.replace("_mask.png", ".png") for x in masks]
 
     for image_name, mask in tqdm(zip(images, masks)):
-        image = Image.open(image_name)
-        mask = Image.open(mask)
+        image = Image.open(image_name)                                      # 打开图片
+        mask = Image.open(mask)                                             # 打开mask图片
         w, h = image.size
-        print(f"loaded input image of size ({w}, {h})")
+        print(f"loaded input image of size ({w}, {h})")                     # 打印图片大小
         if max(w, h) > MAX_SIZE:
             factor = MAX_SIZE / max(w, h)
             w = int(factor * w)
             h = int(factor * h)
-        width, height = map(lambda x: x - x % 64, (w, h))  # resize to integer multiple of 64
-        image = image.resize((width, height))
+        width, height = map(lambda x: x - x % 64, (w, h))                   # resize to integer multiple of 64
+        image = image.resize((width, height))                               #
         print(f"resized to ({width}, {height})")
 
         prompt = "photograph of a beautiful empty scene, highest quality settings"
@@ -200,9 +194,6 @@ def run(opt):
             num_samples=num_samples,
             h=height, w=width, image_name=image_name
         )
-
-
-
 
 
 if __name__ == "__main__":
